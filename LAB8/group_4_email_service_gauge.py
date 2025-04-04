@@ -1,33 +1,44 @@
 import tkinter as tk
 import math
 import smtplib
-import threading  # ✅ Added for smooth email sending
+import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # ---------------- SMTP CONFIG (SendGrid) ----------------
 SENDGRID_SMTP_SERVER = "smtp.sendgrid.net"
 SMTP_PORT = 587
-SMTP_USERNAME = "apikey"  # Must be the literal string "apikey"
-SMTP_PASSWORD = ""
-SENDER_EMAIL = "fahimaahmadi109@gmail.com"
-RECEIVER_EMAIL = "fahimaahmadi109@gmail.com"
+SMTP_USERNAME = "apikey"  # This must be the literal string "apikey"
+SENDGRID_API_KEY =""
+SENDER_EMAIL = "networkinggroupl3@gmail.com"
+# ✅ List of recipients
+RECEIVER_EMAILS = [
+  #"mnovapac@my.centennialcollege.ca",
+  "mnazari9@my.centennialcollege.ca",
+  "ddiazpar@my.centennialcollege.ca"
+ # "eemiowei@my.centennialcollege.ca"
+]
+
 
 def send_email_alert(value):
     subject = "🚨 Critical Temperature Alert"
-    body = f"The user entered a temperature of {value}°C, which is outside the safe range (0–40°C)."
+
+    if value == "Invalid Input":
+        body = "The temperature entered is invalid input. Please check the system."
+    else:
+        body = f"The user entered a temperature of {value}°C, which is dangerous outside the safe range is (0–40°C)."
 
     msg = MIMEMultipart()
     msg["From"] = SENDER_EMAIL
-    msg["To"] = RECEIVER_EMAIL
+    msg["To"] = ", ".join(RECEIVER_EMAILS)
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
 
     try:
         with smtplib.SMTP(SENDGRID_SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(msg)
+            server.login(SMTP_USERNAME, SENDGRID_API_KEY)
+            server.sendmail(SENDER_EMAIL, RECEIVER_EMAILS, msg.as_string())
         print("✅ Email sent successfully!")
     except Exception as e:
         print("❌ Failed to send email:", str(e))
@@ -133,11 +144,9 @@ class ModernGaugeApp:
             value = float(self.entry.get())
             clamped = False
 
-            # ✅ Send email in a separate thread to avoid freezing
             if value < 0 or value > 40:
                 threading.Thread(target=send_email_alert, args=(value,)).start()
 
-            # Clamp value
             if value < 0:
                 target_temp = 0
                 clamped = True
@@ -167,8 +176,10 @@ class ModernGaugeApp:
 
         except ValueError:
             self.status_label.config(text="❌ Enter a valid number", fg="#c0392b")
+            threading.Thread(target=send_email_alert, args=("Invalid Input",)).start()
 
 
+# ---------------- RUN APP ------------------------
 if __name__ == "__main__":
     root = tk.Tk()
     app = ModernGaugeApp(root)
